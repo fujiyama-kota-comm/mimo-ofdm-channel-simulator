@@ -166,7 +166,7 @@ python python/plot_mimo_ofdm_ber.py
 
 ## 📉 BER Performance Example
 
-![BER graph](images/mimo_ofdm_ber_graph.png)
+
 
 ---
 
