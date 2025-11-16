@@ -1,5 +1,18 @@
+/**
+ * @file ofdm.c
+ * @brief Simple radix-2 FFT / IFFT based OFDM modulator / demodulator.
+ *
+ *   - FFT:  X[k] = Σ x[n] e^{-j2πnk/N}
+ *   - IFFT: x[n] = (1/N) Σ X[k] e^{+j2πnk/N}
+ *
+ * Cyclic prefix:
+ *   - ofdm_add_cp  : appends CP to time-domain symbol
+ *   - ofdm_remove_cp: removes CP from received symbol
+ */
+
 #include "ofdm.h"
 
+#include <complex.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +28,7 @@
 static int is_power_of_two(int N) { return (N > 0) && ((N & (N - 1)) == 0); }
 
 /* ============================================================
- * bit reverse
+ * Bit-reversed copy
  * ============================================================ */
 static void bit_reverse_copy(const complex float *in, complex float *out,
                              int N) {
@@ -34,13 +47,13 @@ static void bit_reverse_copy(const complex float *in, complex float *out,
 }
 
 /* ============================================================
- * 正しい FFT (DIT)
- * X[k] = Σ x[n] e^{-j2π nk/N}
+ * FFT (DIT, radix-2)
+ * X[k] = Σ x[n] e^{-j2πnk/N}
  * ============================================================ */
 static void fft_radix2(const complex float *x_in, complex float *X_out, int N) {
   if (!is_power_of_two(N)) {
     fprintf(stderr, "fft_radix2: N=%d is not power of two\n", N);
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   bit_reverse_copy(x_in, X_out, N);
@@ -50,10 +63,9 @@ static void fft_radix2(const complex float *x_in, complex float *X_out, int N) {
 
     for (int start = 0; start < N; start += len) {
       for (int k = 0; k < half; k++) {
-        /* ★ここを修正：W = e^{-j 2πk/len} */
+        /* Twiddle: W = e^{-j 2πk/len} */
         float ang = -2.0f * (float)M_PI * (float)k / (float)len;
         complex float W = cosf(ang) + I * sinf(ang);
-        // cos(-θ) + j sin(-θ) = cos θ - j sin θ = e^{-jθ}
 
         complex float a = X_out[start + k];
         complex float b = X_out[start + k + half] * W;
@@ -66,14 +78,14 @@ static void fft_radix2(const complex float *x_in, complex float *X_out, int N) {
 }
 
 /* ============================================================
- * 正しい IFFT (DIT)
- * x[n] = (1/N) Σ X[k] e^{+j2π nk/N}
+ * IFFT (DIT, radix-2)
+ * x[n] = (1/N) Σ X[k] e^{+j2πnk/N}
  * ============================================================ */
 static void ifft_radix2(const complex float *X_in, complex float *x_out,
                         int N) {
   if (!is_power_of_two(N)) {
     fprintf(stderr, "ifft_radix2: N=%d is not power of two\n", N);
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   bit_reverse_copy(X_in, x_out, N);
@@ -84,7 +96,7 @@ static void ifft_radix2(const complex float *X_in, complex float *x_out,
     for (int start = 0; start < N; start += len) {
       for (int k = 0; k < half; k++) {
         float ang = +2.0f * (float)M_PI * (float)k / (float)len;
-        complex float W = cosf(ang) + I * sinf(ang); // e^{+jθ}
+        complex float W = cosf(ang) + I * sinf(ang); /* e^{+jθ} */
 
         complex float a = x_out[start + k];
         complex float b = x_out[start + k + half] * W;
@@ -104,33 +116,33 @@ static void ifft_radix2(const complex float *X_in, complex float *x_out,
  * Public OFDM API
  * ============================================================ */
 
-/* 周波数 → 時間 */
+/* Frequency-domain → time-domain (no CP) */
 void ofdm_ifft_symbol(const complex float *X_freq, complex float *x_time,
                       const ofdm_cfg_t *cfg) {
   if (!cfg || cfg->nfft <= 0) {
     fprintf(stderr, "ofdm_ifft_symbol: invalid cfg\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
   ifft_radix2(X_freq, x_time, cfg->nfft);
 }
 
-/* 時間 → 周波数 */
+/* Time-domain → frequency-domain (no CP) */
 void ofdm_fft_symbol(const complex float *x_time, complex float *X_freq,
                      const ofdm_cfg_t *cfg) {
   if (!cfg || cfg->nfft <= 0) {
     fprintf(stderr, "ofdm_fft_symbol: invalid cfg\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
   fft_radix2(x_time, X_freq, cfg->nfft);
 }
 
-/* CP付加 */
+/* Add cyclic prefix */
 void ofdm_add_cp(const complex float *x_no_cp, complex float *x_cp,
                  const ofdm_cfg_t *cfg) {
   int N = cfg->nfft;
   int Ncp = cfg->ncp;
 
-  /* 末尾 Ncp を先頭へ */
+  /* Copy last Ncp samples of x_no_cp to the head of x_cp */
   for (int i = 0; i < Ncp; i++) {
     x_cp[i] = x_no_cp[N - Ncp + i];
   }
@@ -139,7 +151,7 @@ void ofdm_add_cp(const complex float *x_no_cp, complex float *x_cp,
   }
 }
 
-/* CP除去 */
+/* Remove cyclic prefix */
 void ofdm_remove_cp(const complex float *x_cp, complex float *x_no_cp,
                     const ofdm_cfg_t *cfg) {
   int N = cfg->nfft;
@@ -150,7 +162,7 @@ void ofdm_remove_cp(const complex float *x_cp, complex float *x_no_cp,
   }
 }
 
-/* OFDM変調 */
+/* One OFDM symbol modulation (IFFT + CP) */
 void ofdm_modulate_symbol(const complex float *X_freq, complex float *x_out,
                           const ofdm_cfg_t *cfg) {
   int N = cfg->nfft;
@@ -158,7 +170,7 @@ void ofdm_modulate_symbol(const complex float *X_freq, complex float *x_out,
   complex float *tmp = malloc(sizeof(complex float) * N);
   if (!tmp) {
     fprintf(stderr, "ofdm_modulate_symbol: malloc failed\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   ofdm_ifft_symbol(X_freq, tmp, cfg);
@@ -167,7 +179,7 @@ void ofdm_modulate_symbol(const complex float *X_freq, complex float *x_out,
   free(tmp);
 }
 
-/* OFDM逆変調 */
+/* One OFDM symbol demodulation (CP removal + FFT) */
 void ofdm_demodulate_symbol(const complex float *x_in, complex float *X_freq,
                             const ofdm_cfg_t *cfg) {
   int N = cfg->nfft;
@@ -175,7 +187,7 @@ void ofdm_demodulate_symbol(const complex float *x_in, complex float *X_freq,
   complex float *tmp = malloc(sizeof(complex float) * N);
   if (!tmp) {
     fprintf(stderr, "ofdm_demodulate_symbol: malloc failed\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   ofdm_remove_cp(x_in, tmp, cfg);
