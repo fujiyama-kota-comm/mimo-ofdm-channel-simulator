@@ -1,8 +1,8 @@
 # 📡 **mimo-ofdm-channel-simulator**
 
-![Build](https://github.com/fujiyama-kota-comm/fec-nsc-codec/actions/workflows/c-cpp.yml/badge.svg)
+![Build](https://github.com/fujiyama-kota-comm/mimo-ofdm-channel-simulator/actions/workflows/c-cpp.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/github/v/tag/fujiyama-kota-comm/fec-nsc-codec)
+![Version](https://img.shields.io/github/v/tag/fujiyama-kota-comm/mimo-ofdm-channel-simulator)
 
 A clean and modular C implementation of
 **MIMO-OFDM downlink channel simulation**, including:
