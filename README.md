@@ -181,7 +181,8 @@ and 3GPP TDL channel parameters:
 | `Nfft` | **256** | Number of OFDM subcarriers (FFT size) |
 | `SCS_HZ` | **30 kHz** | Subcarrier spacing (NR-like numerology) |
 | `fs` | **7.68 MHz** | Sampling rate (= Nfft × SCS) |
-| CP | Normal CP | 256-point FFT with NR-consistent CP length |
+| CP | Normal CP | CP length chosen to provide sufficient margin over the maximum delay spread of the TDL profile (avoids ISI for TDL-A/B/C with 256-point FFT) |
+
 
 ---
 
