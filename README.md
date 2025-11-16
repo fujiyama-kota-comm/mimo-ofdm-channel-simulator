@@ -261,5 +261,5 @@ For large changes, please open an issue first.
 Developed as part of research on
 **MIMO-OFDM, fading channels, and physical-layer signal processing**.
 
-If you find this project useful, please consider giving it a ⭐！
+If you find this project useful, please consider giving it a ⭐!
 
