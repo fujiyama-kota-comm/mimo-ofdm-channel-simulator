@@ -170,6 +170,44 @@ python python/plot_mimo_ofdm_ber.py
 
 ---
 
+## 📐 Simulation Parameters (for BER Graph)
+
+The BER result shown above was generated using the following MIMO-OFDM
+and 3GPP TDL channel parameters:
+
+### **OFDM Parameters**
+| Parameter | Value | Description |
+|-----------|--------|-------------|
+| `Nfft` | **256** | Number of OFDM subcarriers (FFT size) |
+| `SCS_HZ` | **30 kHz** | Subcarrier spacing (NR-like numerology) |
+| `fs` | **7.68 MHz** | Sampling rate (= Nfft × SCS) |
+| CP | Normal CP | 256-point FFT with NR-consistent CP length |
+
+---
+
+### **MIMO Configuration**
+| Parameter | Value | Description |
+|-----------|--------|-------------|
+| `Ntx` | **2** | Number of transmit antennas |
+| `Nrx` | **2** | Number of receive antennas |
+| MIMO mode | Spatial multiplexing | One QAM symbol per Tx antenna per subcarrier |
+
+---
+
+### **Channel Model (3GPP TDL)**
+| Parameter | Value | Description |
+|-----------|--------|-------------|
+| `tdl_type` | **TDL-A** | 3GPP frequency-selective delay profile |
+| Carrier frequency | **3.5 GHz** | mid-band FR1 channel |
+| `speed_kmh` | **30 km/h** | UE mobility → Jakes Doppler applied |
+| `DS_desired_ns` | **363 ns** | RMS delay spread scaling (urban NLOS-like) |
+
+The frequency-domain channel **H[k]** is computed from the full TDL taps
+and evolves over time using a Jakes-like Doppler filter.
+This yields a realistic 5G-NR-compatible fading environment for BER evaluation.
+
+---
+
 ## 📂 Source Code Structure
 
 ### src/
